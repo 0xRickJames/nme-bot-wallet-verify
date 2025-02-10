@@ -10,6 +10,7 @@ dotenv.config();
 
 const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID!;
 const REDIRECT_URI = process.env.REDIRECT_URI!;
+const API_ADDRESS = process.env.API_ADDRESS!;
 
 function VerifyComponent() {
   const searchParams = useSearchParams();
@@ -39,7 +40,7 @@ function VerifyComponent() {
 
   const exchangeDiscordCode = async (code: string) => {
     try {
-      const response = await axios.post("http://localhost:3001/discord-auth", {
+      const response = await axios.post(`${API_ADDRESS}/discord-auth`, {
         code,
       });
 
@@ -102,7 +103,7 @@ function VerifyComponent() {
     }
 
     try {
-      const response = await axios.post("http://localhost:3001/verify-wallet", {
+      const response = await axios.post(`${API_ADDRESS}/verify-wallet`, {
         userId,
         discordId: discordUser.id,
         wallet,
