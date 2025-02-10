@@ -1,19 +1,22 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { ethers } from "ethers";
 import axios from "axios";
+import dotenv from "dotenv";
 
-const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID;
-const REDIRECT_URI = process.env.REDIRECT_URI;
+dotenv.config();
 
-export default function Verify() {
+const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID!;
+const REDIRECT_URI = process.env.REDIRECT_URI!;
+
+function VerifyComponent() {
   const searchParams = useSearchParams();
-  const urlUserId = searchParams.get("user"); // ✅ Preserved userId from URL
-  const discordCode = searchParams.get("code"); // ✅ Discord OAuth code from URL
-  const stateParam = searchParams.get("state"); // ✅ Retrieve userId from state after OAuth
-  const userId = stateParam || urlUserId; // ✅ Use state userId if it exists, fallback to URL userId
+  const urlUserId = searchParams.get("user");
+  const discordCode = searchParams.get("code");
+  const stateParam = searchParams.get("state");
+  const userId = stateParam || urlUserId;
 
   const [wallet, setWallet] = useState<string | null>(null);
   const [signature, setSignature] = useState<string | null>(null);
@@ -29,7 +32,6 @@ export default function Verify() {
       return;
     }
 
-    // ✅ If user just logged in via Discord, exchange the OAuth code
     if (discordCode) {
       exchangeDiscordCode(discordCode);
     }
@@ -49,7 +51,6 @@ export default function Verify() {
     }
   };
 
-  // ✅ Modify Discord Login URL to Include userId inside `state`
   const discordLoginUrl = `https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(
     REDIRECT_URI
   )}&response_type=code&scope=identify&state=${encodeURIComponent(
@@ -163,5 +164,14 @@ export default function Verify() {
 
       {status && <p className="mt-4 text-yellow-400">{status}</p>}
     </div>
+  );
+}
+
+// ✅ Wrap everything in Suspense to avoid Next.js errors
+export default function Verify() {
+  return (
+    <Suspense fallback={<div className="text-white">Loading...</div>}>
+      <VerifyComponent />
+    </Suspense>
   );
 }
