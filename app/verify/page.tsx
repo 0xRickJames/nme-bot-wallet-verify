@@ -8,9 +8,10 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID!;
-const REDIRECT_URI = process.env.REDIRECT_URI!;
-const API_ADDRESS = process.env.API_ADDRESS!;
+const NEXT_PUBLIC_DISCORD_CLIENT_ID =
+  process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID!;
+const NEXT_PUBLIC_REDIRECT_URI = process.env.NEXT_PUBLIC_REDIRECT_URI!;
+const NEXT_PUBLIC_API_ADDRESS = process.env.NEXT_PUBLIC_API_ADDRESS!;
 
 function VerifyComponent() {
   const searchParams = useSearchParams();
@@ -40,9 +41,12 @@ function VerifyComponent() {
 
   const exchangeDiscordCode = async (code: string) => {
     try {
-      const response = await axios.post(`${API_ADDRESS}/discord-auth`, {
-        code,
-      });
+      const response = await axios.post(
+        `${NEXT_PUBLIC_API_ADDRESS}/discord-auth`,
+        {
+          code,
+        }
+      );
 
       setDiscordUser(response.data);
       setStatus(`✅ Logged in as ${response.data.username}`);
@@ -52,8 +56,8 @@ function VerifyComponent() {
     }
   };
 
-  const discordLoginUrl = `https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(
-    REDIRECT_URI
+  const discordLoginUrl = `https://discord.com/oauth2/authorize?client_id=${NEXT_PUBLIC_DISCORD_CLIENT_ID}&NEXT_PUBLIC_REDIRECT_URI=${encodeURIComponent(
+    NEXT_PUBLIC_REDIRECT_URI
   )}&response_type=code&scope=identify&state=${encodeURIComponent(
     userId || ""
   )}`;
@@ -103,12 +107,15 @@ function VerifyComponent() {
     }
 
     try {
-      const response = await axios.post(`${API_ADDRESS}/verify-wallet`, {
-        userId,
-        discordId: discordUser.id,
-        wallet,
-        signature,
-      });
+      const response = await axios.post(
+        `${NEXT_PUBLIC_API_ADDRESS}/verify-wallet`,
+        {
+          userId,
+          discordId: discordUser.id,
+          wallet,
+          signature,
+        }
+      );
 
       setStatus(response.data.message || "✅ Wallet verified successfully!");
     } catch (error) {
