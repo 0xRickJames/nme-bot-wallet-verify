@@ -22,18 +22,20 @@ function VerifyComponent() {
 
   const [wallet, setWallet] = useState<string | null>(null);
   const [signature, setSignature] = useState<string | null>(null);
-  const [status, setStatus] = useState<string | null>(null);
   const [discordUser, setDiscordUser] = useState<{
     id: string;
     username: string;
   } | null>(null);
+  const [discordStatus, setDiscordStatus] = useState("❌ Not logged in");
+  const [walletStatus, setWalletStatus] = useState("❌ Not connected");
+  const [signStatus, setSignStatus] = useState("❌ Not signed");
+  const [verifyStatus, setVerifyStatus] = useState("❌ Not verified");
 
   useEffect(() => {
     if (!userId) {
-      setStatus("❌ Invalid verification link.");
+      setDiscordStatus("❌ Invalid verification link.");
       return;
     }
-
     if (discordCode) {
       exchangeDiscordCode(discordCode);
     }
@@ -43,16 +45,13 @@ function VerifyComponent() {
     try {
       const response = await axios.post(
         `${NEXT_PUBLIC_API_ADDRESS}/discord-auth`,
-        {
-          code,
-        }
+        { code }
       );
-
       setDiscordUser(response.data);
-      setStatus(`✅ Logged in as ${response.data.username}`);
+      setDiscordStatus(`✅ Logged in as ${response.data.username}`);
     } catch (error) {
       console.error(error);
-      setStatus("❌ Discord authentication failed.");
+      setDiscordStatus("❌ Discord authentication failed.");
     }
   };
 
@@ -63,49 +62,51 @@ function VerifyComponent() {
   )}`;
 
   const connectWallet = async () => {
-    const ethereum = window.ethereum as unknown as ethers.Eip1193Provider;
-    if (!ethereum) {
-      setStatus("❌ No crypto wallet found. Please install MetaMask.");
+    if (!window.ethereum) {
+      setWalletStatus("❌ No crypto wallet found. Please install MetaMask.");
       return;
     }
     try {
-      const provider = new ethers.BrowserProvider(ethereum);
+      const provider = new ethers.BrowserProvider(
+        window.ethereum as ethers.Eip1193Provider
+      );
       const signer = await provider.getSigner();
       const address = await signer.getAddress();
       setWallet(address);
-      setStatus("✅ Wallet connected!");
+      setWalletStatus(
+        `✅ Wallet connected:\n${address.slice(0, 6)}...${address.slice(-4)}`
+      );
     } catch (error) {
       console.error(error);
-      setStatus("❌ Failed to connect wallet.");
+      setWalletStatus("❌ Failed to connect wallet.");
     }
   };
 
   const signMessage = async () => {
     if (!wallet) {
-      setStatus("❌ Connect your wallet first.");
+      setSignStatus("❌ Connect your wallet first.");
       return;
     }
-
     try {
-      const ethereum = window.ethereum as unknown as ethers.Eip1193Provider;
-      const provider = new ethers.BrowserProvider(ethereum);
+      const provider = new ethers.BrowserProvider(
+        window.ethereum as ethers.Eip1193Provider
+      );
       const signer = await provider.getSigner();
       const message = `Verify your wallet for Discord: ${userId}`;
       const signedMessage = await signer.signMessage(message);
       setSignature(signedMessage);
-      setStatus("✅ Signed successfully!");
+      setSignStatus("✅ Signed successfully!");
     } catch (error) {
       console.error(error);
-      setStatus("❌ Signing failed.");
+      setSignStatus("❌ Signing failed.");
     }
   };
 
   const verifyWallet = async () => {
     if (!wallet || !signature || !userId || !discordUser) {
-      setStatus("❌ Sign the message and log in with Discord first.");
+      setVerifyStatus("❌ Sign the message and log in with Discord first.");
       return;
     }
-
     try {
       const response = await axios.post(
         `${NEXT_PUBLIC_API_ADDRESS}/verify-wallet`,
@@ -116,61 +117,97 @@ function VerifyComponent() {
           signature,
         }
       );
-
-      setStatus(response.data.message || "✅ Wallet verified successfully!");
+      setVerifyStatus(
+        response.data.message || `✅ Wallet verified successfully!`
+      );
     } catch (error) {
       console.error(error);
-      setStatus("❌ Verification failed.");
+      setVerifyStatus("❌ Verification failed.");
     }
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 text-white">
-      <h1 className="text-2xl font-bold">Verify Your Wallet</h1>
+    <div className="flex flex-col items-center text-center justify-center min-h-screen bg-gray-900 text-gray-300 px-6">
+      <h1 className="text-4xl font-bold mb-4">NME Bot</h1>
+      <h2 className="text-2xl font-semibold mb-6">Verify Your Wallet</h2>
 
-      {!discordUser ? (
-        <a
-          href={discordLoginUrl}
-          className="mt-4 px-6 py-2 bg-indigo-500 rounded-lg"
-        >
-          Login with Discord
-        </a>
-      ) : (
-        <p className="mt-2">Logged in as {discordUser.username}</p>
-      )}
+      <div className="bg-gray-800 p-6 rounded-lg shadow-lg max-w-md w-full">
+        <p className="text-lg mb-4">
+          Follow these steps to verify your wallet:
+        </p>
 
-      <button
-        onClick={connectWallet}
-        className="mt-4 px-6 py-2 bg-blue-500 rounded-lg"
-      >
-        {wallet ? "Wallet Connected" : "Connect Wallet"}
-      </button>
+        {/* Buttons Section with Individual Status */}
+        <div className="flex flex-col gap-4 mt-3">
+          <ol className="list-decimal list-inside text-gray-300 space-y-2">
+            <div>
+              {/* Discord Login */}
+              <div>
+                <li className="p-2">Sign into Discord</li>
+                <a
+                  href={discordLoginUrl}
+                  className={`px-6 py-2 rounded-lg text-center block ${
+                    discordUser
+                      ? "bg-gray-600 cursor-not-allowed"
+                      : "bg-indigo-500 hover:bg-indigo-600"
+                  }`}
+                  onClick={(e) => discordUser && e.preventDefault()}
+                >
+                  {discordUser ? `${discordStatus}` : "Login with Discord"}
+                </a>
+              </div>
+            </div>
+            {/* Connect Wallet */}
+            <div>
+              <li className="p-2">Connect your wallet</li>
+              <button
+                onClick={connectWallet}
+                className={`px-6 py-2 rounded-lg w-full ${
+                  wallet
+                    ? "bg-gray-600 cursor-not-allowed"
+                    : "bg-blue-500 hover:bg-blue-600"
+                }`}
+                disabled={!!wallet}
+              >
+                {wallet ? `${walletStatus}` : "Connect"}
+              </button>
+            </div>
 
-      {wallet && (
-        <>
-          <p className="mt-2">Connected: {wallet}</p>
-          <button
-            onClick={signMessage}
-            className="mt-4 px-6 py-2 bg-green-500 rounded-lg"
-          >
-            Sign Message
-          </button>
-        </>
-      )}
+            {/* Sign Message */}
+            <div>
+              <li>Sign a message to verify your identity</li>
+              <button
+                onClick={signMessage}
+                className={`px-6 py-2 rounded-lg w-full ${
+                  !wallet
+                    ? "bg-gray-600 cursor-not-allowed"
+                    : "bg-green-500 hover:bg-green-600"
+                }`}
+                disabled={!wallet}
+              >
+                Sign Message
+              </button>
+              <p className="text-sm mt-1">{signStatus}</p>
+            </div>
 
-      {signature && (
-        <>
-          <p className="mt-2">Signature: {signature.substring(0, 10)}...</p>
-          <button
-            onClick={verifyWallet}
-            className="mt-4 px-6 py-2 bg-purple-500 rounded-lg"
-          >
-            Verify Wallet
-          </button>
-        </>
-      )}
-
-      {status && <p className="mt-4 text-yellow-400">{status}</p>}
+            {/* Verify Wallet */}
+            <div>
+              <li>Verify that it worked</li>
+              <button
+                onClick={verifyWallet}
+                className={`px-6 py-2 rounded-lg w-full ${
+                  !wallet || !signature || !discordUser
+                    ? "bg-gray-600 cursor-not-allowed"
+                    : "bg-purple-500 hover:bg-purple-600"
+                }`}
+                disabled={!wallet || !signature || !discordUser}
+              >
+                Verify Wallet
+              </button>
+              <p className="text-sm mt-1">{verifyStatus}</p>
+            </div>
+          </ol>
+        </div>
+      </div>
     </div>
   );
 }
